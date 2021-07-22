@@ -17,6 +17,7 @@ import { Location } from '@angular/common';
 export class DishdetailComponent implements OnInit {
 
   dish: Dish;
+  dishcopy: Dish;
   errMess: string;
   dishIds: string[];
   prev: string;
@@ -48,13 +49,14 @@ export class DishdetailComponent implements OnInit {
     private location: Location,
     private fb: FormBuilder,
     @Inject('BaseURL') private BaseURL) {
-      this.createForm();
      }
 
   ngOnInit() {
+    this.createForm();
+
     this.dishservice.getDishIds().subscribe(dishIds => this.dishIds = dishIds);
     this.route.params.pipe(switchMap((params: Params) => this.dishservice.getDish(params['id'])))
-    .subscribe(dish => { this.dish = dish; this.setPrevNext(dish.id); },
+    .subscribe(dish => { this.dish = dish; this.dishcopy = dish; this.setPrevNext(dish.id); },
     errMess => this.errMess = <any>errMess);
   }
 
@@ -71,8 +73,8 @@ export class DishdetailComponent implements OnInit {
   createForm() {
     this.commentForm = this.fb.group({
       author: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(25)] ],
-      comment: ['', [Validators.required, Validators.minLength(1)] ],
-      rating: 5
+      rating: 5,
+      comment: ['', [Validators.required, Validators.minLength(1)] ]
     });
 
     this.commentForm.valueChanges
@@ -104,13 +106,18 @@ export class DishdetailComponent implements OnInit {
   onSubmit() {
     this.comment = this.commentForm.value;
     this.comment.date = new Date().toISOString();
-    this.dish.comments.push(this.comment);
     console.log(this.comment);
-    this.comment = null;
+    this.dishcopy.comments.push(this.comment);
+    this.dishservice.putDish(this.dishcopy)
+      .subscribe(dish => {
+        this.dish = dish; this.dishcopy = dish;
+      },
+      errmess => { this.dish = null; this.dishcopy = null; this.errMess = <any>errmess; });
+    this.commentFormDirective.resetForm() ;
     this.commentForm.reset({
       author: '',
-      comment: '',
-      rating: 5
+      rating: 5,
+      comment: ''
     });
   }
 
